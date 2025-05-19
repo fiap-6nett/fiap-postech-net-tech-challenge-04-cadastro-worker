@@ -14,7 +14,7 @@ public class ContatoRepository : IContatoRepository
     public ContatoRepository(IMongoClient mongoClient, IOptions<MongoDbSettings> mongoDbSettings)
     {
         var database = mongoClient.GetDatabase(mongoDbSettings.Value.Database);
-        _contatos = database.GetCollection<ContatoEntity>("Contatos"); 
+        _contatos = database.GetCollection<ContatoEntity>("contatos"); 
     }
     
     public ContatoEntity ObterPorID(Guid id)
@@ -32,26 +32,18 @@ public class ContatoRepository : IContatoRepository
             var filterEmail = Builders<ContatoEntity>.Filter.Eq(c => c.Email, contato.Email);
 
             // Realizando a busca no banco
-            var existingContato =  _contatos.Find(filterId).FirstOrDefault();
+            var existingContato_id =  _contatos.Find(filterId).FirstOrDefault();
+            var existingContato_email =  _contatos.Find(filterEmail).FirstOrDefault();
             
-
-            if (existingContato == null)
+            if (existingContato_id == null && existingContato_email == null)
             {
-                throw new Exception("Contato não encontrado.");
+                _contatos.InsertOneAsync(contato);
             }
-            
-            var filter = Builders<ContatoEntity>.Filter.Eq(c => c.Id, contato.Id);
-            var update = Builders<ContatoEntity>.Update
-                .Set(c => c.Nome, contato.Nome)
-                .Set(c => c.Telefone, contato.Telefone)
-                .Set(c => c.Email, contato.Email)
-                .Set(c => c.Ddd, contato.Ddd);
-
-            _contatos.UpdateOneAsync(filter, update);
+           
         }
         catch (Exception ex)
         {
-            throw new Exception($"Falha ao atualizar o contato. Erro {ex.Message}");
+            throw new Exception($"Falha ao inserir o contato. Erro {ex.Message}");
         }
        
     }

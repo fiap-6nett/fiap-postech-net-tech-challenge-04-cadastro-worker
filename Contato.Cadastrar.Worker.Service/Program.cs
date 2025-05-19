@@ -12,55 +12,45 @@ using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using RabbitMQ.Client;
 
-
 IHost host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
     {
         var configuration = context.Configuration;
-        
-        
+
+        // MongoDB
         services.Configure<MongoDbSettings>(configuration.GetSection("MongoDb"));
-        
+
         BsonSerializer.RegisterSerializer(new GuidSerializer(GuidRepresentation.Standard));
 
         services.AddSingleton<IMongoClient>(sp =>
         {
-            var mongoDbSettings = sp.GetRequiredService<IOptions<MongoDbSettings>>().Value;
-            var connectionString = mongoDbSettings.ConnectionString;
-            return new MongoClient(connectionString);
+            var settings = sp.GetRequiredService<IOptions<MongoDbSettings>>().Value;
+            return new MongoClient(settings.ConnectionString);
         });
-        
-        // Carregar as configurações de RabbitMQ
-        var rabbitMqSettings = configuration.GetSection("RabbitMQ").Get<RabbitMqSettings>();
-        Console.WriteLine($"RabbitMQ HostName: {rabbitMqSettings.HostName}");  // Verifique se os valores estão corretos no console
-        
-        // Registra a configuração de RabbitMqSettings
+
+        // RabbitMQ
         services.Configure<RabbitMqSettings>(configuration.GetSection("RabbitMQ"));
-        
-        
-        
-        // Registra o IConnection usando as configurações
+
         services.AddSingleton<IConnection>(sp =>
         {
-            var rabbitMqSettings = sp.GetRequiredService<IOptions<RabbitMqSettings>>().Value;
-            Console.WriteLine($"RabbitMQ HostName: {rabbitMqSettings.HostName}"); // Verifique novamente
+            var settings = sp.GetRequiredService<IOptions<RabbitMqSettings>>().Value;
             var factory = new ConnectionFactory
             {
-                HostName = rabbitMqSettings.HostName,
-                UserName = rabbitMqSettings.UserName,
-                Password = rabbitMqSettings.Password,
-                VirtualHost = rabbitMqSettings.VirtualHost
+                HostName = settings.HostName,
+                UserName = settings.UserName,
+                Password = settings.Password,
+                VirtualHost = settings.VirtualHost
             };
 
             return factory.CreateConnection();
         });
 
-
-       
+        // Injeção de dependências da aplicação
         services.AddSingleton<IContatoRepository, ContatoRepository>();
         services.AddSingleton<IContatoAppService, ContatoAppService>();
         services.AddSingleton<IContatoConsumer, ContatoConsumer>();
-        
+
+        // Worker
         services.AddHostedService<Worker>();
     })
     .Build();
