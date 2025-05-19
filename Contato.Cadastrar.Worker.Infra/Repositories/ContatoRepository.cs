@@ -29,6 +29,7 @@ public class ContatoRepository : IContatoRepository
             
             // Criando um filtro para buscar pelo Id
             var filterId = Builders<ContatoEntity>.Filter.Eq(c => c.Id, contato.Id);
+            var filterEmail = Builders<ContatoEntity>.Filter.Eq(c => c.Email, contato.Email);
 
             // Realizando a busca no banco
             var existingContato =  _contatos.Find(filterId).FirstOrDefault();
