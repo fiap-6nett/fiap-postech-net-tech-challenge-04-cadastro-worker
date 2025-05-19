@@ -20,7 +20,7 @@ public class ContatoConsumer : IContatoConsumer, IDisposable
         _connection = rabbitConnection;
         _channel = _connection.CreateModel();
 
-        var queueName = configuration["RabbitMQ:QueueName"] ?? "atualizacao-contato";
+        var queueName = configuration["RabbitMQ:QueueName"] ?? "cadastro-contato";
 
         _channel.QueueDeclare(queue: queueName,
             durable: true,
