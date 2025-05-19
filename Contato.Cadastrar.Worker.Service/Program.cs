@@ -4,7 +4,6 @@ using Contato.Cadastrar.Worker.Domain.Interfaces;
 using Contato.Cadastrar.Worker.Infra.Mensageria;
 using Contato.Cadastrar.Worker.Infra.Mensageria.Consumer;
 using Contato.Cadastrar.Worker.Infra.Repositories;
-using Contato.Cadastrar.Worker.Service;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
