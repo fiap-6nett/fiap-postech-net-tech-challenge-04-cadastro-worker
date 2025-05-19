@@ -14,6 +14,7 @@ public class ContatoConsumer : IContatoConsumer, IDisposable
     private readonly IContatoAppService _appService;
     private readonly string _queueName;
     private bool _consumingStarted = false;
+    private EventingBasicConsumer? _consumer;
 
     public ContatoConsumer(IContatoAppService appService, IConfiguration configuration, IConnection rabbitConnection)
     {
@@ -29,6 +30,9 @@ public class ContatoConsumer : IContatoConsumer, IDisposable
             exclusive: false,
             autoDelete: false,
             arguments: null);
+
+        // Define que só uma mensagem por vez será entregue ao consumidor
+        _channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
     }
 
     public void StartConsuming(CancellationToken cancellationToken)
@@ -36,9 +40,9 @@ public class ContatoConsumer : IContatoConsumer, IDisposable
         if (_consumingStarted)
             return;
 
-        var consumer = new EventingBasicConsumer(_channel);
+        _consumer = new EventingBasicConsumer(_channel);
 
-        consumer.Received += (model, ea) =>
+        _consumer.Received += (model, ea) =>
         {
             var body = ea.Body.ToArray();
             var message = Encoding.UTF8.GetString(body);
@@ -53,14 +57,22 @@ public class ContatoConsumer : IContatoConsumer, IDisposable
         _channel.BasicConsume(
             queue: _queueName,
             autoAck: true,
-            consumer: consumer);
+            consumer: _consumer);
 
         _consumingStarted = true;
     }
 
     public void Dispose()
     {
-        _channel?.Dispose();
-        _connection?.Dispose();
+        try
+        {
+            _consumer?.Model?.Close();
+            _channel?.Close();
+            _connection?.Close();
+        }
+        catch
+        {
+            // Evita exceções se já estiver fechado
+        }
     }
 }
