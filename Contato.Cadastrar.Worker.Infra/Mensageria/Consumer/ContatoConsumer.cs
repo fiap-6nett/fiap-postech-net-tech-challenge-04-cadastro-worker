@@ -1,18 +1,19 @@
-using System.Text;
-using Contato.Cadastrar.Worker.Application.Dtos;
 using Contato.Cadastrar.Worker.Application.Interfaces;
+using Contato.Cadastrar.Worker.Infra.Mensageria.Consumer;
+using Microsoft.Extensions.Configuration;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Newtonsoft.Json;
-using Microsoft.Extensions.Configuration;
-
-namespace Contato.Cadastrar.Worker.Infra.Mensageria.Consumer;
+using System.Text;
+using Contato.Cadastrar.Worker.Application.Dtos;
 
 public class ContatoConsumer : IContatoConsumer, IDisposable
 {
     private readonly IModel _channel;
     private readonly IConnection _connection;
     private readonly IContatoAppService _appService;
+    private readonly string _queueName;
+    private bool _consumingStarted = false;
 
     public ContatoConsumer(IContatoAppService appService, IConfiguration configuration, IConnection rabbitConnection)
     {
@@ -20,9 +21,10 @@ public class ContatoConsumer : IContatoConsumer, IDisposable
         _connection = rabbitConnection;
         _channel = _connection.CreateModel();
 
-        var queueName = configuration["RabbitMQ:QueueName"] ?? "cadastro-contato";
+        _queueName = configuration["RabbitMQ:QueueName"] ?? "cadastro-contato";
 
-        _channel.QueueDeclare(queue: queueName,
+        _channel.QueueDeclare(
+            queue: _queueName,
             durable: true,
             exclusive: false,
             autoDelete: false,
@@ -31,6 +33,9 @@ public class ContatoConsumer : IContatoConsumer, IDisposable
 
     public void StartConsuming(CancellationToken cancellationToken)
     {
+        if (_consumingStarted)
+            return;
+
         var consumer = new EventingBasicConsumer(_channel);
 
         consumer.Received += (model, ea) =>
@@ -45,8 +50,12 @@ public class ContatoConsumer : IContatoConsumer, IDisposable
             _appService.CadastrarContato(dto);
         };
 
-        
-        _channel.BasicConsume(queue: "cadastro-contato", autoAck: true, consumer: consumer);
+        _channel.BasicConsume(
+            queue: _queueName,
+            autoAck: true,
+            consumer: consumer);
+
+        _consumingStarted = true;
     }
 
     public void Dispose()
