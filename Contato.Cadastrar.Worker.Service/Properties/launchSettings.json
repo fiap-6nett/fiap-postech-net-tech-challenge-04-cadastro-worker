@@ -1,7 +1,7 @@
 ﻿{
   "$schema": "http://json.schemastore.org/launchsettings.json",
   "profiles": {
-    "Contato.Atualizar.Worker.Service": {
+    "Contato.Cadastrar.Worker.Service": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "environmentVariables": {
